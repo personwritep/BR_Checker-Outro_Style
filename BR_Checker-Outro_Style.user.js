@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name        BR Checker+Outro Style ⭐
 // @namespace        http://tampermonkey.net/
-// @version        4.9
+// @version        5.0
 // @description        Blogの書式整形ツール・文字数カウンター 統合版 「Ctrl+F9」「Shift+F9」
 // @author        Ameba blog User
 // @match        https://blog.ameba.jp/ucs/entry/srventry*
@@ -432,7 +432,8 @@ function main(){
                         insert_node.appendChild(iframe_doc.createElement('BR'));
                         let asa=iframe_body.querySelector('.asa');
                         if(asa){
-                            iframe_body.insertBefore(insert_node, asa); }
+                            if(asa.previousElementSibling.tagName!="STYLE"){
+                                iframe_body.insertBefore(insert_node, asa); }}
                         else{
                             iframe_body.appendChild(insert_node); }}}}}}
 
