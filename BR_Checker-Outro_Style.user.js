@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name        BR Checker+Outro Style ⭐
 // @namespace        http://tampermonkey.net/
-// @version        5.0
+// @version        5.1
 // @description        Blogの書式整形ツール・文字数カウンター 統合版 「Ctrl+F9」「Shift+F9」
 // @author        Ameba blog User
 // @match        https://blog.ameba.jp/ucs/entry/srventry*
@@ -405,6 +405,7 @@ function main(){
                 let chiled_tag=iframe_doc.querySelectorAll('.cke_editable >*');
                 for(let k=chiled_tag.length-1; k>=0; k--){
                     if(chiled_tag[k].tagName!="STYLE"){
+
                         if(chiled_tag[k].tagName=="P" && chiled_tag[k].childNodes.length==1){
                             if(chiled_tag[k].childNodes[0].tagName=="BR"){
                                 chiled_tag[k].remove(); }
@@ -413,29 +414,59 @@ function main(){
                                 chiled_tag[k].remove(); }
                             else{
                                 break; }}
+
+                        else if(chiled_tag[k].tagName=="P" && chiled_tag[k].childNodes.length==2){
+                            if(chiled_tag[k].childNodes[0].tagName=="STYLE" &&
+                               chiled_tag[k].childNodes[1].tagName=="STYLE"){
+                                iframe_body.insertBefore(chiled_tag[k].childNodes[0], chiled_tag[k]);
+                                iframe_body.insertBefore(chiled_tag[k].childNodes[0], chiled_tag[k]);
+                                chiled_tag[k].remove(); }}
+
+                        else if(chiled_tag[k].tagName=="P" && chiled_tag[k].childNodes.length==3){
+                            if(chiled_tag[k].childNodes[0].tagName=="STYLE" &&
+                               chiled_tag[k].childNodes[1].tagName=="STYLE" &&
+                               chiled_tag[k].childNodes[2].tagName=="STYLE"){
+                                iframe_body.insertBefore(chiled_tag[k].childNodes[0], chiled_tag[k]);
+                                iframe_body.insertBefore(chiled_tag[k].childNodes[0], chiled_tag[k]);
+                                iframe_body.insertBefore(chiled_tag[k].childNodes[0], chiled_tag[k]);
+                                chiled_tag[k].remove(); }}
+
                         else if(chiled_tag[k].tagName=="DIV" && chiled_tag[k].childNodes.length==1){
                             if(chiled_tag[k].childNodes[0].tagName=="BR"){
                                 chiled_tag[k].remove(); }
                             else{
                                 break; }}
+
                         else{
                             break; }}}
 
                 add_line(); // ストレージ値の「空白行」を本文末尾に追加
                 counter();
 
+
                 function add_line(){
                     for(let k=0; k<bcos_set[2]; k++){ // bcos_set[2] は「空白行」のストレージ値
                         add_nextline(); }
+
                     function add_nextline(){
                         let insert_node=iframe_doc.createElement('P');
                         insert_node.appendChild(iframe_doc.createElement('BR'));
                         let asa=iframe_body.querySelector('.asa');
                         if(asa){
                             if(asa.previousElementSibling.tagName!="STYLE"){
-                                iframe_body.insertBefore(insert_node, asa); }}
+                                iframe_body.insertBefore(insert_node, asa); }
+                            else{
+                                if(asa.previousElementSibling.previousElementSibling.tagName!="STYLE"){
+                                    iframe_body.insertBefore(insert_node, asa.previousElementSibling); }
+                                else{
+                                    iframe_body.insertBefore(
+                                        insert_node, asa.previousElementSibling.previousElementSibling); }}}
                         else{
-                            iframe_body.appendChild(insert_node); }}}}}}
+                            iframe_body.appendChild(insert_node); }}
+
+                } // add_line()
+
+            }}} // tail_sp()
 
 
 
