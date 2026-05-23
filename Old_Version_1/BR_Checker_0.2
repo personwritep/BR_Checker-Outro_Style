@@ -1,0 +1,95 @@
+// ==UserScript==
+// @name         BR Checker
+// @namespace    http://tampermonkey.net/
+// @version      0.2
+// @description  <br>タグによる改行をチェック表示する
+// @author       Ameba blog User
+// @match        https://blog.ameba.jp/ucs/entry/srventry*
+// @grant        none
+// ==/UserScript==
+
+window.addEventListener('load', function(){
+    'use strict';
+
+var marked=0; // マーク記入後・削除後の指標
+var disp;
+var editor_iframe;
+var iframe_doc;
+
+var target=document.getElementById('cke_1_contents'); // 監視 target
+var monitor=new MutationObserver(catch_key);
+monitor.observe(target, {childList: true}); // ショートカット待受け開始
+
+catch_key();
+
+
+function catch_key(){
+    editor_iframe=document.querySelector('.cke_wysiwyg_frame');
+    if(editor_iframe !=null){ // WYSIWYG表示が実行条件
+        if(marked==1){ sign(); }
+
+        iframe_doc=editor_iframe.contentWindow.document;
+        iframe_doc.addEventListener("keydown", check_key);
+        function check_key(event){
+            if(event.which==17 || event.ctrlKey==true){
+            if(event.which==120 || event.keyCode==120){ // ショートカット「Ctrl＋F9」
+                event.stopImmediatePropagation();
+                set_mark(); }}}}} // catch_key
+
+var set_mark=function(){
+    if(marked==0){
+        marked=1;
+        sign(); } // マークをセット
+    else{
+        marked=0;
+        sign_clear(); } // マークのリセット
+} // set_mark
+
+
+function sign(){
+    let br_tag;
+    let br_mark;
+    let i_tag;
+    let c_br=0;
+
+    editor_iframe=document.querySelector('.cke_wysiwyg_frame');
+    editor_iframe.onload=function() {
+    iframe_doc=editor_iframe.contentWindow.document; }
+
+    i_tag=iframe_doc.querySelectorAll('.brmark');
+    if(i_tag.length >=1){
+        for(let i=0; i<i_tag.length; i++){ i_tag[i].remove(); }} // マーク削除
+
+    br_tag=iframe_doc.querySelectorAll('br');
+    for(let i=0; i<br_tag.length; i++){
+        if(br_tag[i].parentNode.tagName=="P" && br_tag[i].parentNode.childNodes.length !=1){
+            c_br +=1;
+            br_mark=iframe_doc.createElement("i");
+            br_mark.appendChild(iframe_doc.createTextNode("▼"));
+            br_mark.setAttribute("class", "brmark");
+            br_mark.setAttribute("style", "display: inline-block;width: 0;margin-left: -2px;color: red");
+            br_tag[i].parentNode.insertBefore(br_mark, br_tag[i]); }
+        else{ continue; }}
+
+    disp=document.createElement("span");
+    disp.appendChild(document.createTextNode("▼ BR Checker"));
+    disp.setAttribute("style", "display: inline-block; margin: 0 0 4px 8px; padding: 3px 15px 0; \
+                                                                       font-size: 16px; color: #fff; background: red");
+    disp.appendChild(document.createTextNode("　count : " + c_br));
+    if(target.firstChild.tagName=="IFRAME"){
+    target.insertBefore(disp, editor_iframe); }}
+
+
+function sign_clear(){
+    let i_tag;
+
+    editor_iframe=document.querySelector('.cke_wysiwyg_frame');
+    iframe_doc=editor_iframe.contentWindow.document;
+
+    target.firstChild.remove();
+
+    i_tag=iframe_doc.querySelectorAll('.brmark');
+    if(i_tag.length >=1){
+        for(let i=0; i<i_tag.length; i++){ i_tag[i].remove(); }}} // マーク削除
+
+});
