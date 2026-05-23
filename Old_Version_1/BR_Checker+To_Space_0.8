@@ -1,0 +1,272 @@
+// ==UserScript==
+// @name        BR Checker + To Space (nbsp)
+// @namespace        http://tampermonkey.net/
+// @version        0.8
+// @description        Blogの書式整形ツール 統合版
+// @author        Ameba blog User
+// @match        https://blog.ameba.jp/ucs/entry/srventry*
+// @grant        none
+// ==/UserScript==
+
+window.addEventListener('load', function(){
+    'use strict';
+
+    var marked1=0; // BR Checker 起動・非起動の指標
+    var marked2=0; // To Space (nbsp) 起動・非起動の指標
+    var target;
+    var editor_iframe;
+    var iframe_doc;
+    var iframe_body;
+    var pre_box; // PRE枠のコンテナブロック
+
+    target=document.getElementById('cke_1_contents'); // 監視 target
+    let monitor=new MutationObserver(catch_key);
+    monitor.observe(target, {childList: true}); // ショートカット待受け開始
+
+    catch_key();
+
+
+function catch_key(){
+    let send;
+
+    editor_iframe=document.querySelector('.cke_wysiwyg_frame');
+    if(editor_iframe){ // WYSIWYG表示が実行条件
+
+        if(marked1==1){
+            sign(); }
+        if(marked2==1){
+            active(); }
+
+        iframe_doc=editor_iframe.contentWindow.document;
+        iframe_doc.addEventListener("keydown", check_key);
+        document.addEventListener("keydown", check_key);
+
+        function check_key(event){
+            let gate=-1;
+            if(event.which==17 || event.ctrlKey==true){
+                if(event.which==120 || event.keyCode==120){
+                    event.preventDefault(); send=120; gate=1; }} // ショートカット「Ctrl＋F9」
+            if(event.which==17 || event.ctrlKey==true){
+                if(event.which==121 || event.keyCode==121){
+                    event.preventDefault(); send=121; gate=1; }} // ショートカット「Ctrl＋F10」
+
+            if(editor_iframe){
+                if(gate==1){
+                    event.stopImmediatePropagation();
+                    event.preventDefault();
+                    set_task(send); }}} // check_key
+
+        brfore_end(); }} // catch_key
+
+
+function set_task(send){
+    if(send==120){ //「Ctrl＋F9」 BR Checker スイッチ
+        if(marked1==0){
+            marked1=1;
+            sign();
+            marked2=1;
+            active(); } // BR Checker をON   To Space (nbsp) をON
+        else if(marked1==1){
+            marked1=0;
+            sign_clear();
+            marked2=0;
+            disable(); }} // BR Checker をOFF   To Space (nbsp) をOFF
+    if(send==121){ //「Ctrl＋F10」 To Space (nbsp) スイッチ
+        if(marked2==0){
+            marked1=1;
+            sign();
+            marked2=1;
+            active(); } // BR Checker をON   To Space (nbsp) をON
+        else if(marked2==1){
+            marked1=0;
+            sign_clear();
+            marked2=0;
+            disable(); }} // BR Checker をOFF   To Space (nbsp) をOFF
+} // set_task
+
+
+// ********** BR Checker  Functions **************
+
+function sign(){
+    let br_tag;
+    let br_mark;
+    let i_tag;
+    let c_br=0;
+    let c_br_span;
+    let css='';
+    let disp;
+
+    editor_iframe=document.querySelector('.cke_wysiwyg_frame');
+    editor_iframe.onload=function() {
+        iframe_doc=editor_iframe.contentWindow.document; }
+
+    i_tag=iframe_doc.querySelectorAll('.brmark');
+    if(i_tag.length >=1){
+        for(let i=0; i < i_tag.length; i++){ i_tag[i].remove(); }} // BRマーク削除
+
+    br_tag=iframe_doc.querySelectorAll('br');
+    for(let i=0; i < br_tag.length; i++){
+        if(br_tag[i].parentNode.tagName=="P" && br_tag[i].parentNode.childNodes.length !=1){
+            c_br +=1;
+            br_mark=iframe_doc.createElement("i");
+            br_mark.appendChild(iframe_doc.createTextNode("▼"));
+            br_mark.setAttribute("class", "brmark");
+            br_mark.setAttribute("style", "display: inline-block;width: 0;margin-left: -2px;color: red");
+            br_tag[i].parentNode.insertBefore(br_mark, br_tag[i]); }
+        else{ continue; }} // BRマーク表示
+
+    css +=['display: inline-block; margin: 0 0 4px 8px; padding: 4px 15px 1px;',
+           'font-size: 16px; color: #fff; background: red'].join(' ');
+    disp=document.createElement("span");
+    disp.appendChild(document.createTextNode("▼ BR Checker　count : "));
+    disp.setAttribute("style", css);
+    c_br_span=document.createElement("span");
+    c_br_span.setAttribute("style", "font-weight: bold");
+    c_br_span.appendChild(document.createTextNode(c_br));
+    disp.appendChild(c_br_span);
+    disp.appendChild(document.createTextNode("　　To Space (nbsp) "));
+
+    monitor.disconnect();
+
+    if(target.firstChild.tagName!="IFRAME"){
+        target.firstChild.remove();
+        target.insertBefore(disp, editor_iframe); }
+    else{
+        target.insertBefore(disp, editor_iframe); }
+
+    monitor.observe(target, {childList: true}); } // BR Checker 起動表示
+
+
+function sign_clear(){
+    let i_tag;
+
+    editor_iframe=document.querySelector('.cke_wysiwyg_frame');
+    iframe_doc=editor_iframe.contentWindow.document;
+
+    if(target.firstChild.tagName !="IFRAME"){
+        target.firstChild.remove(); } // BR Checker 起動表示を削除
+
+    i_tag=iframe_doc.querySelectorAll('.brmark');
+    if(i_tag.length >=1){
+        for(let i=0; i < i_tag.length; i++){ i_tag[i].remove(); }}} // BRマーク削除
+
+
+// ********** To Space (nbsp)  Functions **************
+
+
+function active(){
+    let buffer;
+    let nbsp;
+    let a_count;
+
+    iframe_doc=editor_iframe.contentWindow.document;
+    iframe_body=iframe_doc.querySelector('body.cke_editable');
+    pre_box=iframe_body.querySelectorAll('div');
+    buffer=Array(pre_box.length);
+
+    for(let i=0; i<pre_box.length; i++){
+        select_pre_box(i); }
+
+    function select_pre_box(i){
+        pre_box[i].oncontextmenu=function(){
+            if(pre_box[i].firstChild.tagName=='PRE'){
+                select_box(select_do);
+                return false;
+
+                function select_box(select_do){
+                    boxshadow();
+                    setTimeout( select_do, 100); }
+                function boxshadow(){
+                    pre_box[i].style.outline='2px solid #03a9f4'; }
+                function select_do(){ start_select(i); }}}}
+
+    function start_select(i){
+        let regex=new RegExp('\u00A0', 'g');
+        nbsp=pre_box[i].innerText.match(regex);
+        let pa_count=pre_box[i].getElementsByTagName("a");
+
+        if(buffer[i] !=null){
+            let ok=confirm(" ❎　 変換前に戻しますか？");
+            if(ok){
+                pre_box[i].firstChild.innerHTML=buffer[i];
+                buffer[i]=null;
+                pre_box[i].style.outline='none'; }}
+        else{
+            if(nbsp !=null || pa_count !=null){
+                let ok=confirm([" ⏬　 「&nbsp」　" + nbsp.length + " 個を半角空白に変換します\n",
+                                       "　　　 「a要素」　" + pa_count.length + " 個をテキストに置換えます"].join(''));
+                if(ok){ to_space(i); }
+                else{ pre_box[i].style.outline='none'; }}
+            else{ ; }}}
+
+
+    function to_space(i){
+        a_count=0;
+        buffer[i]=pre_box[i].firstChild.innerHTML; // 選択pre枠のデータバックアップ
+        let child_node=pre_box[i].firstChild.childNodes;
+
+        for(let t=0; t<child_node.length; t++){
+            if(child_node[t].nodeType==3){
+                child_node[t].nodeValue=child_node[t].nodeValue.replace(/\u00A0/g , '\u0020'); }
+            else if(child_node[t].nodeType==1 && child_node[t].tagName=="A"){
+                let inner_node=child_node[t].childNodes;
+                if(inner_node.length==1 && inner_node[0].nodeType==3){
+                    pre_box[i].firstChild.replaceChild(inner_node[0], child_node[t]); } // text を a要素と入替え
+                else{
+                    a_count +=1; }} // 子ノードが1個の textの条件に当てはまらない a要素
+            else{
+                let child_node2=child_node[t].childNodes;
+                if(child_node2){
+                    for(let t2=0; t2<child_node2.length; t2++){
+                        if(child_node2[t2].nodeType==3){
+                            child_node2[t2].nodeValue=child_node2[t2].nodeValue.replace(/\u00A0/g , '\u0020'); }
+                        else{
+                            let child_node3=child_node2[t2].childNodes;
+                            if(child_node3){
+                                for(let t3=0; t3<child_node3.length; t3++){
+                                    if(child_node3[t3].nodeType==3){
+                                        child_node3[t3].nodeValue=child_node3[t3].nodeValue.replace(/\u00A0/g , '\u0020'); }}}}}}}}
+
+        let regex=new RegExp('\u00A0', 'g');
+        nbsp=pre_box[i].innerText.match(regex);
+        if(nbsp !=null){
+            alert("❌　変換できなかった「&nbsp」の数 ： " + nbsp.length );}
+        if(a_count !=0){
+            alert("❌　置換えが出来ない「a要素」 ： " + a_count); }}}
+
+
+function disable(){
+
+    for(let i=0; i<pre_box.length; i++){
+        if(pre_box[i].firstChild.tagName=='PRE'){
+            pre_box[i].style.outline='none'; }} // 処理済枠の outline を削除
+    pre_box=[]; }// 動作の無効化
+
+
+// ********** Before End Functions **************
+
+
+function brfore_end(){
+    var submitButton=document.querySelectorAll('.js-submitButton');
+    if(editor_iframe !=null){ //「通常表示」編集画面が実行条件
+        submitButton[0].addEventListener("mousedown", all_clear, false);
+        submitButton[1].addEventListener("mousedown", all_clear, false);
+        submitButton[2].addEventListener("mousedown", all_clear, false); }
+
+function all_clear(){
+    let i_tag;
+    editor_iframe=document.querySelector('.cke_wysiwyg_frame');
+    iframe_doc=editor_iframe.contentWindow.document;
+    i_tag=iframe_doc.querySelectorAll('.brmark');
+    if(i_tag.length >=1){
+        for(let i=0; i < i_tag.length; i++){ i_tag[i].remove(); }} // マーク削除
+
+    let pre_box;
+    iframe_body=iframe_doc.querySelector('body.cke_editable');
+    pre_box=iframe_body.querySelectorAll('div');
+    for(let i=0; i<pre_box.length; i++){
+        if(pre_box[i].firstChild.tagName=='PRE'){
+            pre_box[i].style.outline='none'; }}}}// 処理済枠の outline を削除
+
+
+});
