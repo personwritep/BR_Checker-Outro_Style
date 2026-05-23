@@ -1,0 +1,71 @@
+// ==UserScript==
+// @name        To Space (nbsp)
+// @namespace        http://tampermonkey.net/
+// @version        0.1
+// @description        HTML編集で「&nbsp」を半角空白に変更する
+// @author        Ameba blog User
+// @match        https://blog.ameba.jp/ucs/entry/srventry*
+// @grant        none
+// ==/UserScript==
+
+window.addEventListener('load', function(){
+    'use strict';
+
+let editor_iframe;
+let iframe_doc;
+let iframe_body;
+let nbsp;
+
+var target=document.getElementById('cke_1_contents'); // 監視 target
+var monitor=new MutationObserver(catch_key);
+monitor.observe(target, {childList: true}); // ショートカット待受け開始
+
+catch_key();
+
+
+function catch_key(){
+    editor_iframe=document.querySelector('.cke_wysiwyg_frame');
+    if(editor_iframe !=null){ // WYSIWYG表示が実行条件
+
+        iframe_doc=editor_iframe.contentWindow.document;
+        iframe_doc.addEventListener("keydown", check_key);
+
+        document.addEventListener("keydown", check_key);
+
+        function check_key(event){
+            if(event.which==17 || event.ctrlKey==true){
+            if(event.which==121 || event.keyCode==121){ // ショートカット「Ctrl＋F10」
+                event.stopImmediatePropagation();
+                start_select(); }}}}} // catch_key
+
+
+function start_select(){
+
+    editor_iframe=document.querySelector('.cke_wysiwyg_frame');
+    iframe_doc=editor_iframe.contentWindow.document;
+    iframe_body=iframe_doc.querySelector('body.cke_editable');
+
+    let regex = new RegExp('\u00A0', 'g');
+    nbsp=iframe_body.innerText.match(regex);
+
+    let ok=confirm(" ⏬「&nbsp」" + nbsp.length + " 個を半角空白に変換します");
+    if(ok){ to_space(); }}
+
+
+function to_space(){
+    let style_text=['background: #fafafa; border: 1px solid #aaa; overflow-y: hidden;',
+                          'padding: 0 30px; max-width: 660px'].join(' ');
+    let insert_node_d;
+
+    insert_node_d=iframe_doc.createElement('div');
+    insert_node_d.setAttribute('style', style_text);
+    insert_node_d.appendChild(iframe_doc.createElement('pre'));
+    insert_node_d.lastChild.setAttribute('style', 'white-space:pre');
+    insert_node_d.lastChild.appendChild(iframe_doc.createElement('br'));
+
+    insert_node_d.lastChild.innerText=iframe_body.innerText.replace(/\u00A0/g , '\u0020');
+    iframe_body.innerHTML='';
+    iframe_body.appendChild(insert_node_d);
+ }
+
+});
