@@ -1,0 +1,136 @@
+// ==UserScript==
+// @name         To Space (nbsp) 
+// @namespace  http://tampermonkey.net/
+// @version       0.2
+// @description  HTML編集で「&nbsp」を半角空白に変更する
+// @author        Ameba blog User
+// @match        https://blog.ameba.jp/ucs/entry/srventry*
+// @grant         none
+// ==/UserScript==
+
+window.addEventListener('load', function(){
+    'use strict';
+
+var marked=0; // スクリプト起動の指標
+var editor_iframe;
+var iframe_doc;
+var iframe_body;
+var pre_box;
+var nbsp;
+var buffer;
+
+
+var target=document.getElementById('cke_1_contents'); // 監視 target
+var monitor=new MutationObserver(catch_key);
+monitor.observe(target, {childList: true}); // ショートカット待受け開始
+
+catch_key();
+
+
+function catch_key(){
+    editor_iframe=document.querySelector('.cke_wysiwyg_frame');
+    if(editor_iframe !=null){ // WYSIWYG表示が実行条件
+
+        if(marked==1){
+            active_disp();
+            active(); }
+        else{
+            disable_disp();
+            disable(); }
+
+        iframe_doc=editor_iframe.contentWindow.document;
+        iframe_doc.addEventListener("keydown", check_key);
+        document.addEventListener("keydown", check_key);
+        function check_key(event){
+            if(event.which==17 || event.ctrlKey==true){
+                if(event.which==121 || event.keyCode==121){ // ショートカット「Ctrl＋F10」
+                    event.stopImmediatePropagation();
+                    event.preventDefault();
+                    on_off(); }}}}} // catch_key
+
+
+function on_off(){
+    if(marked==0){
+        marked=1;
+        active_disp();
+        active(); } // スクリプトON
+    else{
+        marked=0;
+        disable_disp();
+        disable(); }} // スクリプトOFF
+
+
+function active_disp(){
+    let css='';
+    let disp;
+    css +=['display: inline-block; margin: 0 0 4px 8px; padding: 4px 50px 1px;',
+           'font-size: 16px; color: #fff; background: #03a9f4'].join(' ');
+    disp=document.createElement("span");
+    disp.appendChild(document.createTextNode("To Space (nbsp)"));
+    disp.setAttribute("style", css);
+    if(target.firstChild.tagName=="IFRAME"){
+        target.insertBefore(disp, editor_iframe); }}
+
+function disable_disp(){
+    if(target.firstChild.tagName !="IFRAME"){
+        target.firstChild.remove(); }} // 起動中の表示削除
+
+
+function active(){
+    iframe_doc=editor_iframe.contentWindow.document;
+    iframe_body=iframe_doc.querySelector('body.cke_editable');
+    pre_box=iframe_body.querySelectorAll('div');
+    buffer=Array(pre_box.length);
+
+    for(let i=0; i<pre_box.length; i++){
+        select_pre_box(i); }
+
+    function select_pre_box(i){
+        pre_box[i].oncontextmenu=function(){
+            if(pre_box[i].firstChild.tagName=='PRE'){
+                select_box(select_do);
+                return false;
+
+                function select_box(select_do){
+                    boxshadow();
+                    setTimeout( select_do, 100); }
+                function boxshadow(){
+                    pre_box[i].style.outline='2px solid #03a9f4'; }
+                function select_do(){ start_select(i); }}}}}
+
+function disable(){
+    iframe_doc=editor_iframe.contentWindow.document;
+    iframe_body=iframe_doc.querySelector('body.cke_editable');
+    pre_box=iframe_body.querySelectorAll('div');
+    for(let i=0; i<pre_box.length; i++){
+        if(pre_box[i].firstChild.tagName=='PRE'){
+            pre_box[i].style.outline='none'; }}
+    pre_box=[]; }
+
+
+function start_select(i){
+    let regex=new RegExp('\u00A0', 'g');
+    nbsp=pre_box[i].innerText.match(regex);
+    if(nbsp !=null){
+        let ok=confirm(" ⏬　 「&nbsp」　" + nbsp.length + " 個を半角空白に変換します");
+        if(ok){ to_space(i); }
+        else{ pre_box[i].style.outline='none'; }}
+    else{
+        if(buffer[i] !=null){
+            let ok=confirm(" ❎　 変換前に戻しますか？");
+            if(ok){
+                pre_box[i].firstChild.innerText=buffer[i];
+                pre_box[i].style.outline='none'; }}
+        else{ alert("「&nbsp」はありません"); }}}
+
+
+function to_space(i){
+    editor_iframe=document.querySelector('.cke_wysiwyg_frame');
+    iframe_doc=editor_iframe.contentWindow.document;
+    iframe_body=iframe_doc.querySelector('body.cke_editable');
+    pre_box=iframe_body.querySelectorAll('div');
+
+    buffer[i]=pre_box[i].firstChild.innerText;
+    pre_box[i].firstChild.innerText=pre_box[i].firstChild.innerText.replace(/\u00A0/g , '\u0020'); }
+
+});
