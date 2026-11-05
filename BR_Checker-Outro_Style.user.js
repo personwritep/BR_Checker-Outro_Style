@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name        BR Checker+Outro Style ⭐
 // @namespace        http://tampermonkey.net/
-// @version        5.2
+// @version        5.3
 // @description        Blogの書式整形ツール・文字数カウンター 統合版 「Ctrl+F9」「Shift+F9」
 // @author        Ameba blog User
 // @match        https://blog.ameba.jp/ucs/entry/srventryinsertinput.do*
@@ -12,6 +12,8 @@
 // @downloadURL        https://github.com/personwritep/BR_Checker-Outro_Style/raw/main/BR_Checker-Outro_Style.user.js
 // ==/UserScript==
 
+
+let listen=Symbol();
 
 let retry=0;
 let interval=setInterval(wait_target, 100);
@@ -52,6 +54,10 @@ function main(){
     function catch_key(){
         let send;
 
+        if(!document[listen]){
+            document.addEventListener("keydown", check_key);
+            document[listen]=true; }
+
         editor_iframe=document.querySelector('.cke_wysiwyg_frame');
         if(editor_iframe){ // WYSIWYG表示が実行条件
             iframe_doc=editor_iframe.contentWindow.document;
@@ -59,26 +65,32 @@ function main(){
             if(mode==1){
                 sign(); }
 
-            document.addEventListener("keydown", check_key);
-            iframe_doc.addEventListener("keydown", check_key);
+            if(!iframe_doc[listen]){
+                iframe_doc.addEventListener("keydown", check_key);
+                iframe_doc[listen]=true; }}
 
 
-            function check_key(event){
-                let gate=-1;
+        function check_key(event){
+            let gate=-1;
 
-                if(event.ctrlKey==true){
-                    if(event.keyCode==120){
-                        event.preventDefault(); send=120; gate=1; }} // ショートカット「Ctrl＋F9」
-                if(event.shiftKey==true){
-                    if(event.keyCode==120){
-                        event.preventDefault(); send=0; gate=1; }} // ショートカット「Shift＋F9」
-                if(editor_iframe){
-                    if(gate==1){
-                        event.stopImmediatePropagation();
-                        event.preventDefault();
-                        set_task(send); }}}
+            if(event.ctrlKey==true){
+                if(event.keyCode==120){
+                    event.preventDefault(); send=120; gate=1; }} // ショートカット「Ctrl＋F9」
+            if(event.shiftKey==true){
+                if(event.keyCode==120){
+                    event.preventDefault(); send=0; gate=1; }} // ショートカット「Shift＋F9」
+            if(editor_iframe){
+                if(gate==1){
+                    event.stopImmediatePropagation();
+                    event.preventDefault();
+                    set_task(send); }}
 
-            before_end(); }} // catch_key
+        } // check_key()
+
+        before_end();
+
+    } // catch_key
+
 
 
     function set_task(send){
